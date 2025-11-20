@@ -1,153 +1,135 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>건물 도감</title>
-    <style>
-        body { font-family: sans-serif; text-align: center; margin: 0; padding: 20px; background: #f4f4f4; }
-        h1 { margin-bottom: 10px; }
-        
-        /* 버튼 스타일 */
-        .btn-start {
-            padding: 15px 30px; font-size: 20px; background: #007bff; color: white;
-            border: none; border-radius: 10px; cursor: pointer; margin-bottom: 20px;
-        }
-        
-        /* 카메라 화면 */
-        #webcam-container {
-            border-radius: 10px; overflow: hidden; display: inline-block;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-        canvas { width: 100%; max-width: 350px; height: auto; }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>32호관 정보</title>
+  <style>
+    :root{--bg:#f5f5f5;--card:#ffffff;--accent:#1e3a8a}
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: Inter, Arial, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      background:var(--bg);
+      color:#111;
+    }
+    header{background:var(--accent);color:#fff;padding:14px;text-align:center;font-weight:700}
+    .container{max-width:1000px;margin:20px auto;padding:16px}
 
-        /* 결과창 */
-        #label-container {
-            margin-top: 20px; background: white; padding: 20px; border-radius: 10px;
-            display: none; /* 처음엔 안 보임 */
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            cursor: pointer; /* 클릭 가능 표시 */
-        }
-        .title { font-size: 24px; font-weight: bold; color: #333; }
-        .desc { font-size: 16px; color: #666; margin: 10px 0; }
-        .link-msg { font-size: 14px; color: #007bff; font-weight: bold; text-decoration: underline; }
-    </style>
+    /* floorplan image */
+    .floorplan{width:100%;height:auto;border-radius:10px;display:block;margin-bottom:18px;border:1px solid rgba(0,0,0,0.06)}
+
+    /* controls */
+    .controls{display:flex;justify-content:center;align-items:center;gap:12px;margin-bottom:16px}
+    .controls button{padding:6px 12px;border-radius:8px;border:none;background:var(--accent);color:white;font-weight:600;cursor:pointer}
+    .controls select{padding:8px 14px;border-radius:8px;border:1px solid #bbb;font-size:16px;font-weight:600;cursor:pointer}
+
+    /* info boxes */
+    .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    .info-box{background:var(--card);padding:12px;border-radius:10px;box-shadow:0 6px 18px rgba(16,24,40,0.04);}    
+    .info-box h2{margin:0 0 8px;font-size:16px}
+    .info-box p{margin:4px 0;color:#333;font-size:14px}
+    .info-box small{color:#6b7280}
+
+    @media (max-width:800px){
+      .grid{grid-template-columns:1fr}
+    }
+  </style>
 </head>
 <body>
+  <header>32호관 (4층)</header>
 
-    <h1>🏙️ 건물 정보 판독기</h1>
-    
-    <button class="btn-start" onclick="init()">📸 카메라 켜기</button>
-    
-    <div id="webcam-container"></div>
-    
-    <div id="label-container" onclick="goToLink()">
-        <div id="result-title" class="title"></div>
-        <div id="result-desc" class="desc"></div>
-        <div id="result-link" class="link-msg"></div>
-    </div>
+  <div class="container">
+    <!-- 가운데 층 컨트롤러 (이곳에 리스트: select가 중앙에 위치) -->
+    <div class="controls">
+      <button id="prevFloor">◀</button>
+      <select id="floorSelect">
+        <option value="1">1층</option>
+        <option value="2">2층</option>
+        <option value="3">3층</option>
+        <option value="4">4층</option>
+      </select>
+      <button id="nextFloor">▶</button>
+    </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
-    
-    <script type="text/javascript">
-        // ★★★ [1] 여기에 본인의 티처블 머신 주소를 넣으세요 ★★★
-        const URL = "https://teachablemachine.withgoogle.com/models/FZXHT2jEt/";
+    <!-- 도면 이미지 (floorplan_1.png ~ floorplan_4.png 예상) -->
+    
+<img id="floorImage" src="floorplan_1.png" alt="건물 도면" class="floorplan" />
 
-        let model, webcam, maxPredictions;
-        let currentLink = ""; // 현재 인식된 건물의 링크 저장
+    <script>
+      // 안전하게 요소를 가져오고 없으면 실패하지 않도록 방어 코드 사용
+      const floorImage = document.getElementById('floorImage');
+      const prevBtn = document.getElementById('prevFloor');
+      const nextBtn = document.getElementById('nextFloor');
+      const floorSelect = document.getElementById('floorSelect');
 
-        // ★★★ [2] 건물 설명 설정 ★★★
-        const buildingInfo = {
-            "Class 1": "이 건물은 1번 건물입니다.",
-            "Class 2": "이 건물은 2번 건물입니다."
-        };
+      let currentFloor = 1;
+      const minFloor = 1;
+      const maxFloor = 4;
 
-        // ★★★ [3] 건물 링크 설정 (요청하신 링크 적용됨) ★★★
-        const buildingLinks = {
-            "Class 1": "https://rkddmltlf.github.io/4",
-            "Class 2": "https://www.google.com"
-        };
+      function updateFloorDisplay() {
+        // 변경될 때마다 select 값과 이미지가 동기화되도록
+        if (floorSelect) floorSelect.value = String(currentFloor);
+        if (floorImage) floorImage.src = 'floorplan_' + currentFloor + '.png';
+      }
 
-        async function init() {
-            const modelURL = URL + "model.json";
-            const metadataURL = URL + "metadata.json";
+      // 버튼에 이벤트 등록 (존재 확인 후)
+      if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+          if (currentFloor > minFloor) {
+            currentFloor--;
+            updateFloorDisplay();
+          }
+        });
+      }
 
-            try {
-                model = await tmImage.load(modelURL, metadataURL);
-                maxPredictions = model.getTotalClasses();
+      if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+          if (currentFloor < maxFloor) {
+            currentFloor++;
+            updateFloorDisplay();
+          }
+        });
+      }
 
-                const flip = false; // 후면 카메라는 반전 없음
-                webcam = new tmImage.Webcam(300, 300, flip);
-                
-                // 모바일 후면 카메라 요청
-                await webcam.setup({ facingMode: "environment" });
-                await webcam.play();
-                
-                window.requestAnimationFrame(loop);
+      if (floorSelect) {
+        floorSelect.addEventListener('change', () => {
+          const val = parseInt(floorSelect.value, 10);
+          if (!isNaN(val) && val >= minFloor && val <= maxFloor) {
+            currentFloor = val;
+            updateFloorDisplay();
+          }
+        });
+      }
 
-                document.getElementById("webcam-container").appendChild(webcam.canvas);
-                document.querySelector(".btn-start").style.display = "none"; // 버튼 숨기기
-            } catch (e) {
-                alert("카메라를 켤 수 없습니다. https 주소인지 확인하세요! 오류내용: " + e);
-            }
-        }
+      // 초기화
+      updateFloorDisplay();
+    </script>
 
-        async function loop() {
-            webcam.update();
-            await predict();
-            window.requestAnimationFrame(loop);
-        }
+    <!-- 기존 정보 박스들 -->
+    <div class="grid">
+      <div class="info-box" id="printerBox">
+        <h2>프린터기</h2>
+        <p><strong>유무:</strong> 없음</p>
+       
+      </div>
 
-        async function predict() {
-            const prediction = await model.predict(webcam.canvas);
-            
-            let highestProb = 0;
-            let bestClassName = "";
+      <div class="info-box" id="storeBox">
+        <h2>정수기</h2>
+        <p><strong>유무:</strong> 있음</p>
+        <p><strong>위치:</strong> 1층 복도, 2층 복도, 4층 복도</p>
+        <p><strong>총 개수:</strong> 3개</p>
+        <small></small>
+      </div>
 
-            // 가장 높은 확률 찾기
-            for (let i = 0; i < maxPredictions; i++) {
-                if (prediction[i].probability > highestProb) {
-                    highestProb = prediction[i].probability;
-                    bestClassName = prediction[i].className;
-                }
-            }
-
-            const container = document.getElementById("label-container");
-            const titleDiv = document.getElementById("result-title");
-            const descDiv = document.getElementById("result-desc");
-            const linkDiv = document.getElementById("result-link");
-
-            // 확률이 85% 넘을 때만 표시
-            if (highestProb > 0.85) {
-                container.style.display = "block";
-                titleDiv.innerText = bestClassName;
-
-                // 설명 표시
-                if (buildingInfo[bestClassName]) {
-                    descDiv.innerText = buildingInfo[bestClassName];
-                } else {
-                    descDiv.innerText = "설명이 등록되지 않았습니다.";
-                }
-
-                // 링크 설정
-                if (buildingLinks[bestClassName]) {
-                    currentLink = buildingLinks[bestClassName];
-                    linkDiv.innerText = "👉 터치하여 상세페이지로 이동";
-                    linkDiv.style.display = "block";
-                } else {
-                    currentLink = "";
-                    linkDiv.style.display = "none";
-                }
-            }
-        }
-
-        // 박스 클릭 시 실행되는 함수
-        function goToLink() {
-            if (currentLink) {
-                window.location.href = currentLink;
-            }
-        }
-    </script>
+      <div class="info-box" id="vendingBox">
+        <h2>자판기</h2>
+        <p><strong>유무:</strong> 있음</p>
+        <p><strong>위치:</strong> 1층 복도</p>
+        <p><strong>총 개수:</strong> 1개</p>
+        <small></small>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
