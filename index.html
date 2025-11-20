@@ -1,103 +1,153 @@
-<script type="text/javascript">
-    const URL = "https://teachablemachine.withgoogle.com/models/FZXHT2jEt/";
-
-    let model, webcam, labelContainer, maxPredictions;
-
-    // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
-    // 여기 이름들을 '잠시 후 화면에 뜨는 이름'과 똑같이 맞춰야 합니다.
-    // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
-    const buildingInfo = {
-        "Class 1": "이곳은 강의실/도서관으로 가는 길입니다.",
-        "Class 2": "여기는 다른 건물입니다." 
-    };
-
-    const buildingLinks = {
-        "Class 1": "https://rkddmltlf.github.io/4",
-        "Class 2": "https://www.naver.com"
-    };
-
-    let currentLink = "";
-
-    async function init() {
-        const modelURL = URL + "model.json";
-        const metadataURL = URL + "metadata.json";
-
-        model = await tmImage.load(modelURL, metadataURL);
-        maxPredictions = model.getTotalClasses();
-
-        const flip = false; 
-        webcam = new tmImage.Webcam(300, 300, flip); 
-        await webcam.setup({ facingMode: "environment" }); 
-        await webcam.play();
-        window.requestAnimationFrame(loop);
-
-        document.getElementById("webcam-container").appendChild(webcam.canvas);
-        document.querySelector("button").style.display = "none";
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>건물 도감</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; margin: 0; padding: 20px; background: #f4f4f4; }
+        h1 { margin-bottom: 10px; }
         
-        // 클릭 이벤트
-        document.getElementById("info-container").addEventListener("click", function() {
+        /* 버튼 스타일 */
+        .btn-start {
+            padding: 15px 30px; font-size: 20px; background: #007bff; color: white;
+            border: none; border-radius: 10px; cursor: pointer; margin-bottom: 20px;
+        }
+        
+        /* 카메라 화면 */
+        #webcam-container {
+            border-radius: 10px; overflow: hidden; display: inline-block;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        canvas { width: 100%; max-width: 350px; height: auto; }
+
+        /* 결과창 */
+        #label-container {
+            margin-top: 20px; background: white; padding: 20px; border-radius: 10px;
+            display: none; /* 처음엔 안 보임 */
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            cursor: pointer; /* 클릭 가능 표시 */
+        }
+        .title { font-size: 24px; font-weight: bold; color: #333; }
+        .desc { font-size: 16px; color: #666; margin: 10px 0; }
+        .link-msg { font-size: 14px; color: #007bff; font-weight: bold; text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+    <h1>🏙️ 건물 정보 판독기</h1>
+    
+    <button class="btn-start" onclick="init()">📸 카메라 켜기</button>
+    
+    <div id="webcam-container"></div>
+    
+    <div id="label-container" onclick="goToLink()">
+        <div id="result-title" class="title"></div>
+        <div id="result-desc" class="desc"></div>
+        <div id="result-link" class="link-msg"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    
+    <script type="text/javascript">
+        // ★★★ [1] 여기에 본인의 티처블 머신 주소를 넣으세요 ★★★
+        const URL = "https://teachablemachine.withgoogle.com/models/FZXHT2jEt/";
+
+        let model, webcam, maxPredictions;
+        let currentLink = ""; // 현재 인식된 건물의 링크 저장
+
+        // ★★★ [2] 건물 설명 설정 ★★★
+        const buildingInfo = {
+            "Class 1": "이 건물은 1번 건물입니다.",
+            "Class 2": "이 건물은 2번 건물입니다."
+        };
+
+        // ★★★ [3] 건물 링크 설정 (요청하신 링크 적용됨) ★★★
+        const buildingLinks = {
+            "Class 1": "https://rkddmltlf.github.io/4",
+            "Class 2": "https://www.google.com"
+        };
+
+        async function init() {
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+
+            try {
+                model = await tmImage.load(modelURL, metadataURL);
+                maxPredictions = model.getTotalClasses();
+
+                const flip = false; // 후면 카메라는 반전 없음
+                webcam = new tmImage.Webcam(300, 300, flip);
+                
+                // 모바일 후면 카메라 요청
+                await webcam.setup({ facingMode: "environment" });
+                await webcam.play();
+                
+                window.requestAnimationFrame(loop);
+
+                document.getElementById("webcam-container").appendChild(webcam.canvas);
+                document.querySelector(".btn-start").style.display = "none"; // 버튼 숨기기
+            } catch (e) {
+                alert("카메라를 켤 수 없습니다. https 주소인지 확인하세요! 오류내용: " + e);
+            }
+        }
+
+        async function loop() {
+            webcam.update();
+            await predict();
+            window.requestAnimationFrame(loop);
+        }
+
+        async function predict() {
+            const prediction = await model.predict(webcam.canvas);
+            
+            let highestProb = 0;
+            let bestClassName = "";
+
+            // 가장 높은 확률 찾기
+            for (let i = 0; i < maxPredictions; i++) {
+                if (prediction[i].probability > highestProb) {
+                    highestProb = prediction[i].probability;
+                    bestClassName = prediction[i].className;
+                }
+            }
+
+            const container = document.getElementById("label-container");
+            const titleDiv = document.getElementById("result-title");
+            const descDiv = document.getElementById("result-desc");
+            const linkDiv = document.getElementById("result-link");
+
+            // 확률이 85% 넘을 때만 표시
+            if (highestProb > 0.85) {
+                container.style.display = "block";
+                titleDiv.innerText = bestClassName;
+
+                // 설명 표시
+                if (buildingInfo[bestClassName]) {
+                    descDiv.innerText = buildingInfo[bestClassName];
+                } else {
+                    descDiv.innerText = "설명이 등록되지 않았습니다.";
+                }
+
+                // 링크 설정
+                if (buildingLinks[bestClassName]) {
+                    currentLink = buildingLinks[bestClassName];
+                    linkDiv.innerText = "👉 터치하여 상세페이지로 이동";
+                    linkDiv.style.display = "block";
+                } else {
+                    currentLink = "";
+                    linkDiv.style.display = "none";
+                }
+            }
+        }
+
+        // 박스 클릭 시 실행되는 함수
+        function goToLink() {
             if (currentLink) {
                 window.location.href = currentLink;
-            } else {
-                alert("링크가 없는 건물입니다.");
-            }
-        });
-    }
-
-    async function loop() {
-        webcam.update(); 
-        await predict();
-        window.requestAnimationFrame(loop);
-    }
-
-    async function predict() {
-        const prediction = await model.predict(webcam.canvas);
-        
-        let highestProp = 0;
-        let bestClassName = "";
-
-        for (let i = 0; i < maxPredictions; i++) {
-            if (prediction[i].probability > highestProp) {
-                highestProp = prediction[i].probability;
-                bestClassName = prediction[i].className;
             }
         }
-
-        const infoDiv = document.getElementById("info-container");
-        const nameDiv = document.getElementById("result-name");
-        const descDiv = document.getElementById("result-desc");
-        const linkMsgDiv = document.getElementById("link-msg");
-        const scoreDiv = document.getElementById("result-score");
-
-        // ★ 테스트를 위해 확률을 0.85에서 0.50으로 낮춤 (더 잘 뜨게)
-        if (highestProp > 0.50) {
-            infoDiv.style.display = "block";
-            
-            // ★ 화면에 정확한 클래스 이름을 보여줍니다 (이걸 보고 수정하세요!)
-            nameDiv.innerText = "인식됨: [" + bestClassName + "]";
-            
-            // buildingInfo에 해당 이름이 있는지 확인
-            if(buildingInfo[bestClassName]) {
-                descDiv.innerText = buildingInfo[bestClassName];
-                descDiv.style.color = "#555"; // 정상 색상
-            } else {
-                // 이름이 안 맞을 경우 경고 메시지 출력
-                descDiv.innerText = "⚠️ 코드를 수정하세요!\n buildingInfo에 '" + bestClassName + "'을(를) 추가해야 합니다.";
-                descDiv.style.color = "red"; // 빨간색 경고
-            }
-
-            // 링크 연결 로직
-            if (buildingLinks[bestClassName]) {
-                currentLink = buildingLinks[bestClassName]; 
-                infoDiv.classList.add("clickable"); 
-                linkMsgDiv.style.display = "block";
-            } else {
-                currentLink = ""; 
-                infoDiv.classList.remove("clickable");
-                linkMsgDiv.style.display = "none";
-            }
-
-            scoreDiv.innerText = "정확도: " + (highestProp * 100).toFixed(1) + "%";
-        }
-    }
-</script>
+    </script>
+</body>
+</html>
