@@ -1,140 +1,228 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>4호관 정보</title>
-  <style>
-    :root{--bg:#f5f5f5;--card:#ffffff;--accent:#1e3a8a}
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family: Inter, Arial, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-      background:var(--bg);
-      color:#111;
-    }
-    header{background:var(--accent);color:#fff;padding:14px;text-align:center;font-weight:700}
-    .container{max-width:1000px;margin:20px auto;padding:16px}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>4호관 정보</title>
+  <style>
+    :root {
+      --bg: #f5f5f5;
+      --card: #ffffff;
+      --accent: #1e3a8a;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      font-family: Inter, Arial, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      background: var(--bg);
+      color: #111;
+    }
+    header {
+      background: var(--accent);
+      color: #fff;
+      padding: 14px;
+      text-align: center;
+      font-weight: 700;
+      font-size: 1.2rem;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 20px auto;
+      padding: 16px;
+    }
 
-    /* floorplan image */
-    .floorplan{width:100%;height:auto;border-radius:10px;display:block;margin-bottom:18px;border:1px solid rgba(0,0,0,0.06)}
+    /* floorplan image */
+    .floorplan {
+      width: 100%;
+      height: auto;
+      border-radius: 10px;
+      display: block;
+      margin-bottom: 18px;
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      background-color: #ddd; /* 이미지가 없을 때 영역 표시용 */
+      min-height: 300px;      /* 이미지가 없을 때 영역 확보용 */
+      object-fit: contain;
+    }
 
-    /* controls */
-    .controls{display:flex;justify-content:center;align-items:center;gap:12px;margin-bottom:16px}
-    .controls button{padding:6px 12px;border-radius:8px;border:none;background:var(--accent);color:white;font-weight:600;cursor:pointer}
-    .controls select{padding:8px 14px;border-radius:8px;border:1px solid #bbb;font-size:16px;font-weight:600;cursor:pointer}
+    /* controls */
+    .controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .controls button {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: none;
+      background: var(--accent);
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .controls button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .controls button:hover:not(:disabled) {
+      opacity: 0.9;
+    }
+    .controls select {
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: 1px solid #bbb;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+    }
 
-    /* info boxes */
-    .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-    .info-box{background:var(--card);padding:12px;border-radius:10px;box-shadow:0 6px 18px rgba(16,24,40,0.04);}    
-    .info-box h2{margin:0 0 8px;font-size:16px}
-    .info-box p{margin:4px 0;color:#333;font-size:14px}
-    .info-box small{color:#6b7280}
+    /* info boxes */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .info-box {
+      background: var(--card);
+      padding: 16px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      border: 1px solid rgba(0,0,0,0.05);
+    }
+    .info-box h2 {
+      margin: 0 0 10px;
+      font-size: 18px;
+      color: var(--accent);
+    }
+    .info-box p {
+      margin: 6px 0;
+      color: #333;
+      font-size: 15px;
+      line-height: 1.4;
+    }
+    .info-box small {
+      color: #6b7280;
+      display: block;
+      margin-top: 8px;
+    }
 
-    @media (max-width:800px){
-      .grid{grid-template-columns:1fr}
-    }
-  </style>
+    /* 반응형 처리 */
+    @media (max-width: 800px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </head>
 <body>
-  <header>4호관 (2층)</header>
 
-  <div class="container">
-    <div class="controls">
-      <button id="prevFloor">◀</button>
-      <select id="floorSelect">
-        <option value="1">1층</option>
-        <option value="2">2층</option>
-                <option value="3">3층</option>
-        <option value="4">4층</option>
-      </select>
-      <button id="nextFloor">▶</button>
-    </div>
+  <header id="headerTitle">4호관 (2층)</header>
 
-    <img id="floorImage" src="floorplan_1.png" alt="건물 도면" class="floorplan" />
+  <div class="container">
+    <div class="controls">
+      <button id="prevFloor">◀ 이전</button>
+      <select id="floorSelect">
+        <option value="1">1층</option>
+        <option value="2" selected>2층</option>
+        <option value="3">3층</option>
+        <option value="4">4층</option>
+      </select>
+      <button id="nextFloor">다음 ▶</button>
+    </div>
 
-    <script>
-      // 요소 가져오기
-      const floorImage = document.getElementById('floorImage');
-      const prevBtn = document.getElementById('prevFloor');
-      const nextBtn = document.getElementById('nextFloor');
-      const floorSelect = document.getElementById('floorSelect');
+    <img id="floorImage" src="floorplan_2.png" alt="건물 도면" class="floorplan" />
 
-      let currentFloor = 1;
-      const minFloor = 1;
-      // 최대 층수를 2에서 4로 변경
-      const maxFloor = 4; 
+    <div class="grid">
+      <div class="info-box" id="printerBox">
+        <h2>🖨️ 프린터기</h2>
+        <p><strong>유무:</strong> 있음</p>
+        <p><strong>위치:</strong> 2층 복도 중앙</p>
+        <p><strong>총 개수:</strong> 1대</p>
+      </div>
 
-      function updateFloorDisplay() {
-        // 선택된 값과 이미지 동기화
-        if (floorSelect) floorSelect.value = String(currentFloor);
-        if (floorImage) floorImage.src = 'floorplan_' + currentFloor + '.png';
-        
-        // 현재 층수에 따라 버튼 활성화/비활성화 상태 업데이트 (선택 사항)
-        if (prevBtn) prevBtn.disabled = (currentFloor === minFloor);
-        if (nextBtn) nextBtn.disabled = (currentFloor === maxFloor);
-      }
+      <div class="info-box" id="storeBox">
+        <h2>💧 정수기</h2>
+        <p><strong>유무:</strong> 있음</p>
+        <p><strong>위치:</strong> 2층 화장실 옆</p>
+        <p><strong>총 개수:</strong> 1개</p>
+      </div>
 
-      // 버튼 이벤트 리스너
-      if (prevBtn) {
-        prevBtn.addEventListener('click', () => {
-          if (currentFloor > minFloor) {
-            currentFloor--;
-            updateFloorDisplay();
-          }
-        });
-      }
+      <div class="info-box" id="vendingBox">
+        <h2>🥤 자판기</h2>
+        <p style="color:red; font-weight:bold;">⚠️ 현재 공사중! 사용불가</p>
+        <p><strong>위치:</strong> 1층 정문</p>
+        <p><strong>총 개수:</strong> 2개</p>
+      </div>
+    </div>
+  </div>
 
-      if (nextBtn) {
-        nextBtn.addEventListener('click', () => {
-          if (currentFloor < maxFloor) {
-            currentFloor++;
-            updateFloorDisplay();
-          }
-        });
-      }
+  <script>
+    // 요소 가져오기
+    const floorImage = document.getElementById('floorImage');
+    const prevBtn = document.getElementById('prevFloor');
+    const nextBtn = document.getElementById('nextFloor');
+    const floorSelect = document.getElementById('floorSelect');
+    const headerTitle = document.getElementById('headerTitle');
 
-      if (floorSelect) {
-        floorSelect.addEventListener('change', () => {
-          const val = parseInt(floorSelect.value, 10);
-          if (!isNaN(val) && val >= minFloor && val <= maxFloor) {
-            currentFloor = val;
-            updateFloorDisplay();
-          }
-        });
-      }
+    let currentFloor = 1; // 초기값 2층
+    const minFloor = 1;
+    const maxFloor = 4; 
 
-      // 초기 실행
-      // 현재 층수 초기값을 URL 헤더 내용인 '4호관 (2층)'과 맞추기 위해 2층으로 설정
-      currentFloor = 2;
-      updateFloorDisplay();
-    </script>
+    function updateFloorDisplay() {
+      // 1. 셀렉트 박스 값 변경
+      if (floorSelect) floorSelect.value = String(currentFloor);
+      
+      // 2. 이미지 소스 변경 (이미지 파일명이 floorplan_1.png, floorplan_2.png 형식이어야 함)
+      if (floorImage) {
+        floorImage.src = `floorplan_${currentFloor}.png`;
+        floorImage.alt = `${currentFloor}층 도면`;
+      }
 
-    <div class="grid">
-      <div class="info-box" id="printerBox">
-        <h2>프린터기</h2>
-        <p><strong>유무:</strong> 있음</p>
-        <p><strong>위치:</strong> 2층 복도</p>
-        <p><strong>총 개수:</strong> 1대</p>
-      </div>
+      // 3. 헤더 텍스트 변경
+      if (headerTitle) {
+        headerTitle.textContent = `4호관 (${currentFloor}층)`;
+      }
+      
+      // 4. 버튼 활성화/비활성화 상태 업데이트
+      if (prevBtn) prevBtn.disabled = (currentFloor === minFloor);
+      if (nextBtn) nextBtn.disabled = (currentFloor === maxFloor);
+    }
 
-      <div class="info-box" id="storeBox">
-        <h2>정수기</h2>
-        <p><strong>유무:</strong> 있음</p>
-        <p><strong>위치:</strong> 2층 복도</p>
-        <p><strong>총 개수:</strong> 1개</p>
-        <small></small>
-      </div>
+    // 이벤트 리스너 설정
+    if (prevBtn) {
+      prevBtn.addEventListener('click', () => {
+        if (currentFloor > minFloor) {
+          currentFloor--;
+          updateFloorDisplay();
+        }
+      });
+    }
 
-      <div class="info-box" id="vendingBox">
-        <p><strong>현재공사중! 사용불가</strong></p>
-        <h2>자판기</h2>
-        <p><strong>유무:</strong> 있음</p>
-        <p><strong>위치:</strong> 1층 정문</p>
-        <p><strong>총 개수:</strong> 2개</p>
-        
-      </div>
-    </div>
-  </div>
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => {
+        if (currentFloor < maxFloor) {
+          currentFloor++;
+          updateFloorDisplay();
+        }
+      });
+    }
+
+    if (floorSelect) {
+      floorSelect.addEventListener('change', (e) => {
+        const val = parseInt(e.target.value, 10);
+        if (!isNaN(val) && val >= minFloor && val <= maxFloor) {
+          currentFloor = val;
+          updateFloorDisplay();
+        }
+      });
+    }
+
+    // 초기 실행
+    updateFloorDisplay();
+  </script>
 </body>
 </html>
